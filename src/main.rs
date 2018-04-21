@@ -18,6 +18,9 @@ pub mod entity;
 pub mod drone;
 pub mod base;
 
+const WIDTH: u32 = 1200;
+const HEIGHT: u32 = 800;
+
 #[allow(unused_mut)]
 
 fn main() {
@@ -25,7 +28,7 @@ fn main() {
     let opengl = OpenGL::V3_2;
 
     // Create an Glutin window.
-    let mut window: Window = WindowSettings::new("spinning-square", [1200, 800])
+    let mut window: Window = WindowSettings::new("spinning-square", [WIDTH, HEIGHT])
         .opengl(opengl)
         .exit_on_esc(true)
         .build()
@@ -40,14 +43,48 @@ fn main() {
     app.entities.push(Entity::base(Base::new()));
 
     let mut events = Events::new(EventSettings::new());
-    let mut x = 0.0;
-    let mut y = 0.0;
+    let mut x_center = 0.0;
+    let mut y_center = 0.0;
     let mut scale = 1.0;
+    let mut mouse_s_pos: (f64, f64) = (0.0, 0.0);
+    let mut mouse_w_pos: Pos = Pos{x:0.0,y:0.0};
+    let mut last_mouse_pos = mouse_w_pos;
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
-            app.render(&r, x, y, scale);
+            app.render(&r, x_center, y_center, scale);
+        }
+        if let Some(pos) = e.mouse_cursor_args() {
+            mouse_s_pos = (pos[0], pos[1]);
+            mouse_w_pos = Pos {
+                        x: (mouse_s_pos.0 - WIDTH as f64/2.0) / scale + x_center,
+                        y: (mouse_s_pos.1 - HEIGHT as f64/2.0) / scale + y_center,
+                    };
         }
 
+        if let Some(button) = e.press_args() {
+            match button {
+                Button::Keyboard(Key::Left) => {
+                    x_center += -5.0;
+                },
+                Button::Keyboard(Key::Right) => {
+                	x_center += 5.0;
+                },
+                Button::Keyboard(Key::Up) => {
+                	y_center += -5.0;
+                },
+                Button::Keyboard(Key::Down) => {
+                	y_center += 5.0;
+                },
+                Button::Mouse(MouseButton::Left) => {
+                    last_mouse_pos = mouse_w_pos;
+                }
+                _ => (),
+            }
+        };
+        if let Some(button) = e.release_args(){
+        	let new_mouse_pos = mouse_w_pos;
+        	app.Get_all_drones(last_mouse_pos,new_mouse_pos);
+        }
         if let Some(u) = e.update_args() {
             app.update(&u);
         }
@@ -93,9 +130,13 @@ impl App {
             //println!("{:?} + {}", d, args.dt);
         }
     }
+
+    fn Get_all_drones(&self, corner1: Pos, corner2: Pos) -> Vec<Drone> {
+        unimplemented!();
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Pos {
     pub x: f64,
     pub y: f64,

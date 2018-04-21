@@ -35,7 +35,7 @@ impl Drone {
         scale: f64,
     ) {
         const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-        let square = rectangle::square(0.0, 0.0, 3.0);
+        let square = rectangle::square(0.0, 0.0, 3.5);
         let transform = self.pos
             .s_cor(c, s_width, s_height, x_center, y_center, scale);
         rectangle(RED, square, transform, gl);
