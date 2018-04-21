@@ -1,0 +1,6 @@
+[package]
+name = "LD41"
+version = "0.1.0"
+authors = ["qfeys <qfeys@skynet.be>"]
+
+[dependencies]
