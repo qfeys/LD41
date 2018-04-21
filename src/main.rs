@@ -57,14 +57,13 @@ impl App {
 
         let square = rectangle::square(0.0, 0.0, 3.0);
         let drones = &self.drones;
-        let (x0, y0) = ((args.width / 2) as f64, (args.height / 2) as f64);
 
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
             clear(GREEN, gl);
 
             for d in drones {
-                let transform = c.transform.trans(x0, y0).trans(d.pos.x, d.pos.y);
+                let transform = d.pos.s_cor(c, args.width, args.height, 0.0, 0.0, 1.0);
 
                 // Draw a box rotating around the middle of the screen.
                 rectangle(RED, square, transform, gl);
