@@ -10,9 +10,15 @@ use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
 use graphics::*;
 
+use entity::*;
 use drone::*;
+use base::*;
 
+pub mod entity;
 pub mod drone;
+pub mod base;
+
+#[allow(unused_mut)]
 
 fn main() {
     // Change this to OpenGL::V2_1 if not working.
@@ -28,14 +34,18 @@ fn main() {
     // Create a new game and run it.
     let mut app = App {
         gl: GlGraphics::new(opengl),
-        drones: Vec::new(),
+        entities: Vec::new(),
     };
-    app.drones.push(Drone::new());
+    app.entities.push(Entity::drone(Drone::new()));
+    app.entities.push(Entity::base(Base::new()));
 
     let mut events = Events::new(EventSettings::new());
+    let mut x = 0.0;
+    let mut y = 0.0;
+    let mut scale = 1.0;
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
-            app.render(&r);
+            app.render(&r, x, y, scale);
         }
 
         if let Some(u) = e.update_args() {
@@ -46,29 +56,40 @@ fn main() {
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
-    drones: Vec<Drone>,
+    entities: Vec<Entity>,
 }
 
 impl App {
-    fn render(&mut self, args: &RenderArgs) {
+    fn render(&mut self, args: &RenderArgs, x_center: f64, y_center: f64, scale: f64) {
         const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 
-        let drones = &self.drones;
+        let entities = &self.entities;
 
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
             clear(GREEN, gl);
 
-            for d in drones {
-                d.draw(gl, &c, args.width, args.height, 0.0, 0.0, 1.0);
+            for e in entities {
+                match *e {
+                    Entity::drone(ref d) => {
+                        d.draw(gl, &c, args.width, args.height, x_center, y_center, scale)
+                    }
+                    Entity::base(ref b) => {
+                        b.draw(gl, &c, args.width, args.height, x_center, y_center, scale)
+                    }
+                }
             }
         });
     }
 
     fn update(&mut self, args: &UpdateArgs) {
         // Rotate 2 radians per second.
-        for d in &mut self.drones {
-            d.walk(args.dt);
+        for e in &mut self.entities {
+            match *e {
+                Entity::drone(ref mut d) => d.walk(args.dt),
+                Entity::base(_) => (),
+            }
+
             //println!("{:?} + {}", d, args.dt);
         }
     }
