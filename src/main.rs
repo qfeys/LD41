@@ -51,11 +51,8 @@ pub struct App {
 
 impl App {
     fn render(&mut self, args: &RenderArgs) {
-
         const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
-        const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 
-        let square = rectangle::square(0.0, 0.0, 3.0);
         let drones = &self.drones;
 
         self.gl.draw(args.viewport(), |c, gl| {
@@ -63,10 +60,7 @@ impl App {
             clear(GREEN, gl);
 
             for d in drones {
-                let transform = d.pos.s_cor(c, args.width, args.height, 0.0, 0.0, 1.0);
-
-                // Draw a box rotating around the middle of the screen.
-                rectangle(RED, square, transform, gl);
+                d.draw(gl, &c, args.width, args.height, 0.0, 0.0, 1.0);
             }
         });
     }
@@ -80,8 +74,6 @@ impl App {
     }
 }
 
-
-
 #[derive(Debug)]
 pub struct Pos {
     pub x: f64,
@@ -92,7 +84,7 @@ impl Pos {
     // Screen coordinates
     pub fn s_cor(
         &self,
-        base_context: Context,
+        base_context: &Context,
         s_width: u32,
         s_height: u32,
         x_center: f64,
