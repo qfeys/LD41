@@ -10,12 +10,10 @@ use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
 use graphics::*;
 
-use entity::*;
 use drone::*;
 use base::*;
 use gui::*;
 
-pub mod entity;
 pub mod drone;
 pub mod base;
 pub mod gui;
@@ -39,11 +37,12 @@ fn main() {
     // Create a new game and run it.
     let mut app = App {
         gl: GlGraphics::new(opengl),
-        entities: Vec::new(),
+        drones: Vec::new(),
+        bases: Vec::new(),
         gui: Gui::new(),
     };
-    app.entities.push(Entity::drone(Drone::new()));
-    app.entities.push(Entity::base(Base::new()));
+    app.drones.push(Drone::new());
+    app.bases.push(Base::new());
 
     let mut events = Events::new(EventSettings::new());
     let mut x_center = 0.0;
@@ -86,9 +85,7 @@ fn main() {
                 Button::Mouse(MouseButton::Right) => {
                     app.set_destination_selection(mouse_w_pos);
                 }
-                Button::Keyboard(Key::A) => {
-                	
-                }
+                Button::Keyboard(Key::A) => {}
                 _ => (),
             }
         };
@@ -111,7 +108,8 @@ fn main() {
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
-    entities: Vec<Entity>,
+    drones: Vec<Drone>,
+    bases: Vec<Base>,
     gui: Gui,
 }
 
@@ -119,37 +117,35 @@ impl App {
     fn render(&mut self, args: &RenderArgs, x_center: f64, y_center: f64, scale: f64) {
         const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 
-        let entities = &self.entities;
+        let drones = &self.drones;
+        let bases = &self.bases;
         let gui = &mut self.gui;
 
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
             clear(GREEN, gl);
 
-            for e in entities {
-                match *e {
-                    Entity::drone(ref d) => {
-                        d.draw(gl, &c, args.width, args.height, x_center, y_center, scale)
-                    }
-                    Entity::base(ref b) => {
-                        b.draw(gl, &c, args.width, args.height, x_center, y_center, scale)
-                    }
-                }
+            for d in drones {
+                d.draw(gl, &c, args.width, args.height, x_center, y_center, scale)
             }
+            for b in bases {
+                b.draw(gl, &c, args.width, args.height, x_center, y_center, scale)
+            }
+
             gui.render(args, gl, &c, x_center, y_center, scale);
         });
     }
 
     fn update(&mut self, args: &UpdateArgs) {
         // Rotate 2 radians per second.
-        for e in &mut self.entities {
-            match *e {
-                Entity::drone(ref mut d) => d.walk(args.dt),
-                Entity::base(_) => (),
-            }
-
-            //println!("{:?} + {}", d, args.dt);
+        for mut d in &mut self.drones {
+            d.walk(args.dt);
         }
+        for mut b in &mut self.bases {
+            b.update(args.dt);
+        }
+
+        //println!("{:?} + {}", d, args.dt);
     }
 
     fn get_all_drones(&mut self, corner1: Pos, corner2: Pos) -> Vec<&Drone> {
@@ -162,27 +158,23 @@ impl App {
             y: f64::max(corner1.y, corner2.y),
         };
         let mut selection: Vec<&Drone> = Vec::new();
-        for mut e in &mut self.entities {
-            if let Entity::drone(ref mut d) = *e {
-                if d.pos.x > min_corner.x && d.pos.x < max_corner.x && d.pos.y > min_corner.y
-                    && d.pos.y < max_corner.y
-                {
-                    d.is_selected = true;
-                    selection.push(d);
-                } else {
-                    d.is_selected = false;
-                }
+        for mut d in &mut self.drones {
+            if d.pos.x > min_corner.x && d.pos.x < max_corner.x && d.pos.y > min_corner.y
+                && d.pos.y < max_corner.y
+            {
+                d.is_selected = true;
+                selection.push(d);
+            } else {
+                d.is_selected = false;
             }
         }
         selection
     }
 
     fn set_destination_selection(&mut self, destination: Pos) {
-        for mut e in &mut self.entities {
-            if let Entity::drone(ref mut d) = *e {
-                if d.is_selected {
-                    d.set_destination(destination);
-                }
+        for mut d in &mut self.drones {
+            if d.is_selected {
+                d.set_destination(destination);
             }
         }
     }

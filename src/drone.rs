@@ -21,6 +21,7 @@ impl Drone {
             speed: 25.0,
             is_selected: false,
             target_pos: Pos { x: 100.0, y: 000.0 },
+            u_type: unit_type::worker,
         }
     }
     pub fn from_pos(pos: Pos) -> Drone {
@@ -30,6 +31,7 @@ impl Drone {
             speed: 25.0,
             is_selected: false,
             target_pos: pos,
+            u_type: unit_type::worker,
         }
     }
 
@@ -84,7 +86,7 @@ impl Drone {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum unit_type {
     worker,
     soldier,

@@ -8,7 +8,7 @@ use drone::unit_type::*;
 pub struct Base {
     pub pos: Pos,
     pub rot: f64,
-    prod_queue: Vec<order>,
+    prod_queue: Vec<Order>,
 }
 
 impl Base {
@@ -38,44 +38,48 @@ impl Base {
     }
 
     pub fn queue_worker(&mut self) {
-        self.prod_queue.push(order::new_worker());
+        self.prod_queue.push(Order::new_worker());
     }
 
     pub fn queue_soldier(&mut self) {
-        self.prod_queue.push(order::new_soldier());
+        self.prod_queue.push(Order::new_soldier());
     }
 
-    pub fn update(&mut self, dt: f64){
+    pub fn update(&mut self, dt: f64) -> Option<::drone::unit_type>{
         let next = self.prod_queue.get(0);
-        let unit = match next {
-            Some(order) => order.update(dt),
-            None => None
-        };
+        let mut o;
+        match next {
+            Some(order) => {
+                o = *order;
+                o.update(dt)
+            }
+            None => None,
+        }
     }
 }
 
-#[derive(Debug)]
-struct order {
+#[derive(Debug, Copy, Clone)]
+struct Order {
     unit: ::drone::unit_type,
     time_left: f64,
 }
 
-impl order {
-    fn new_worker() -> order {
-        order {
+impl Order {
+    fn new_worker() -> Order {
+        Order {
             unit: worker,
             time_left: 4.0,
         }
     }
-    fn new_soldier() -> order {
-        order {
+    fn new_soldier() -> Order {
+        Order {
             unit: soldier,
             time_left: 6.0,
         }
     }
-    fn update(&mut self, dt:f64) -> Option<::drone::unit_type>{
-        self.time_left-= dt;
-        if self.time_left <= 0.0{
+    fn update(&mut self, dt: f64) -> Option<::drone::unit_type> {
+        self.time_left -= dt;
+        if self.time_left <= 0.0 {
             return Some(self.unit);
         }
         None
