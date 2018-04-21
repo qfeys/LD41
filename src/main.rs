@@ -8,6 +8,7 @@ use piston::event_loop::*;
 use piston::input::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
+use graphics::*;
 
 use drone::*;
 
@@ -50,7 +51,6 @@ pub struct App {
 
 impl App {
     fn render(&mut self, args: &RenderArgs) {
-        use graphics::*;
 
         const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
         const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
@@ -77,5 +77,31 @@ impl App {
             d.walk(args.dt);
             //println!("{:?} + {}", d, args.dt);
         }
+    }
+}
+
+
+
+#[derive(Debug)]
+pub struct Pos {
+    pub x: f64,
+    pub y: f64,
+}
+
+impl Pos {
+    // Screen coordinates
+    pub fn s_cor(
+        &self,
+        base_context: Context,
+        s_width: u32,
+        s_height: u32,
+        x_center: f64,
+        y_center: f64,
+        scale: f64,
+    ) -> [[f64; 3]; 2] {
+        base_context
+            .transform
+            .trans(s_width as f64 / 2.0, s_height as f64 / 2.0)
+            .trans((self.x - x_center) / scale, (self.y - y_center) / scale)
     }
 }
