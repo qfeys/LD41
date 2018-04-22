@@ -9,8 +9,9 @@ pub struct Drone {
     pub rot: f64,
     pub speed: f64,
     pub is_selected: bool,
-    target_pos: Pos,
-    u_type: unit_type,
+    pub target_pos: Pos,
+    pub team: u32,
+    pub u_type: unit_type,
 }
 
 impl Drone {
@@ -18,20 +19,33 @@ impl Drone {
         Drone {
             pos: Pos { x: 0.0, y: 0.0 },
             rot: 0.0,
-            speed: 25.0,
+            speed: 15.0,
             is_selected: false,
             target_pos: Pos { x: 100.0, y: 000.0 },
-            u_type: unit_type::worker,
+            team: 1,
+            u_type: unit_type::Worker,
         }
     }
-    pub fn from_pos(pos: Pos) -> Drone {
-        Drone {
-            pos,
-            rot: 0.0,
-            speed: 25.0,
-            is_selected: false,
-            target_pos: pos,
-            u_type: unit_type::worker,
+    pub fn from_pos_n_type(pos: Pos, typ: unit_type) -> Drone {
+        match typ {
+            unit_type::Worker => Drone {
+                pos,
+                rot: 0.0,
+                speed: 15.0,
+                is_selected: false,
+                target_pos: pos,
+                team: 1,
+                u_type: unit_type::Worker,
+            },
+            unit_type::Soldier => Drone {
+                pos,
+                rot: 0.0,
+                speed: 25.0,
+                is_selected: false,
+                target_pos: pos,
+                team: 1,
+                u_type: unit_type::Soldier,
+            },
         }
     }
 
@@ -41,17 +55,18 @@ impl Drone {
         let dir = self.target_pos - self.pos;
         let angle = f64::atan2(dir.y, dir.x);
         let diff = (((angle - self.rot) % pi2) + pi2) % pi2;
+        let max_turn = dt * 2.0;
         if diff < PI {
-            if diff > PI * 2.0 - dt {
+            if diff > PI * 2.0 - max_turn {
                 self.rot += diff;
             } else {
-                self.rot += dt;
+                self.rot += max_turn;
             }
         } else {
-            if diff < dt {
+            if diff < max_turn {
                 self.rot -= diff;
             } else {
-                self.rot -= dt
+                self.rot -= max_turn
             }
         }
         self.rot = ((self.rot % pi2) + pi2) % pi2;
@@ -88,6 +103,6 @@ impl Drone {
 
 #[derive(Debug, Copy, Clone)]
 pub enum unit_type {
-    worker,
-    soldier,
+    Worker,
+    Soldier,
 }

@@ -13,10 +13,12 @@ use graphics::*;
 use drone::*;
 use base::*;
 use gui::*;
+use map::*;
 
 pub mod drone;
 pub mod base;
 pub mod gui;
+pub mod map;
 
 const WIDTH: u32 = 1200;
 const HEIGHT: u32 = 800;
@@ -40,6 +42,7 @@ fn main() {
         drones: Vec::new(),
         bases: Vec::new(),
         gui: Gui::new(),
+        map: Map::new(),
     };
     app.drones.push(Drone::new());
     app.bases.push(Base::new());
@@ -52,9 +55,11 @@ fn main() {
     let mut mouse_w_pos: Pos = Pos { x: 0.0, y: 0.0 };
     let mut last_mouse_pos = mouse_w_pos;
     while let Some(e) = events.next(&mut window) {
+        // RENDERING
         if let Some(r) = e.render_args() {
             app.render(&r, x_center, y_center, scale);
         }
+        // MOUSE POSITION
         if let Some(pos) = e.mouse_cursor_args() {
             let mouse_s_pos = (pos[0], pos[1]);
             mouse_w_pos = Pos {
@@ -63,7 +68,7 @@ fn main() {
             };
             app.gui.set_latest_mouse_pos(mouse_w_pos);
         }
-
+        // BUTTONS
         if let Some(button) = e.press_args() {
             match button {
                 Button::Keyboard(Key::Left) => {
@@ -85,37 +90,41 @@ fn main() {
                 Button::Mouse(MouseButton::Right) => {
                     app.set_destination_selection(mouse_w_pos);
                 }
-                Button::Keyboard(Key::A) => {}
+                Button::Keyboard(Key::A) => {
+                    app.bases[0].queue_worker();
+                }
+                Button::Keyboard(Key::S) => {
+                    app.bases[0].queue_soldier();
+                }
                 _ => (),
             }
         };
+        // BUTTONS RELEASE
         if let Some(button) = e.release_args() {
             if let Button::Mouse(MouseButton::Left) = button {
                 let new_mouse_pos = mouse_w_pos;
                 app.gui.end_box_draw();
-                let drones = app.get_all_drones(last_mouse_pos, new_mouse_pos);
-                println!("New selection:");
-                for ref d in &drones {
-                    println!("Selection: {:?}", d);
-                }
+                app.get_all_drones(last_mouse_pos, new_mouse_pos);
             }
         }
+        // UPDATE
         if let Some(u) = e.update_args() {
             app.update(&u);
         }
     }
 }
 
-pub struct App {
+pub struct App<'a> {
     gl: GlGraphics, // OpenGL drawing backend.
     drones: Vec<Drone>,
     bases: Vec<Base>,
     gui: Gui,
+    map: Map<'a>,
 }
 
-impl App {
+impl<'a> App<'a> {
     fn render(&mut self, args: &RenderArgs, x_center: f64, y_center: f64, scale: f64) {
-        const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
+        const GREEN: [f32; 4] = [0.1, 0.2, 0.1, 1.0];
 
         let drones = &self.drones;
         let bases = &self.bases;
@@ -136,13 +145,19 @@ impl App {
         });
     }
 
-    fn update(&mut self, args: &UpdateArgs) {
-        // Rotate 2 radians per second.
+    fn update<'a>(&mut'a self, args: &UpdateArgs) {
         for mut d in &mut self.drones {
             d.walk(args.dt);
         }
+
+        self.map.sort_drones(&self.drones);
         for mut b in &mut self.bases {
-            b.update(args.dt);
+            let new_drone = b.update(args.dt);
+            if let Some(nd) = new_drone {
+                let d = Drone::from_pos_n_type(b.pos, nd);
+                self.drones.push(d);
+                println!("Drone spawned",);
+            }
         }
 
         //println!("{:?} + {}", d, args.dt);

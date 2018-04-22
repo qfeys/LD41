@@ -1,6 +1,5 @@
-use opengl_graphics::*;
 use graphics::*;
-use opengl_graphics::{GlGraphics, OpenGL};
+use opengl_graphics::GlGraphics;
 use piston::input::*;
 use Pos;
 
@@ -45,12 +44,7 @@ impl Gui {
         scale: f64,
     ) {
         const GRAY: [f32; 4] = [0.5, 0.5, 0.5, 0.5];
-        const NULL: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
         if self.draw_selection_box == true {
-            let border = rectangle::Border {
-                color: GRAY,
-                radius: 1.5,
-            };
             let rect: types::Rectangle<f64> = [
                 (f64::min(
                     self.selection_box_first_corner.x,

@@ -39,21 +39,23 @@ impl Base {
 
     pub fn queue_worker(&mut self) {
         self.prod_queue.push(Order::new_worker());
+        println!("new worker ordered.");
     }
 
     pub fn queue_soldier(&mut self) {
         self.prod_queue.push(Order::new_soldier());
+        println!("new soldier ordered.");
     }
 
-    pub fn update(&mut self, dt: f64) -> Option<::drone::unit_type>{
-        let next = self.prod_queue.get(0);
-        let mut o;
-        match next {
-            Some(order) => {
-                o = *order;
-                o.update(dt)
+    pub fn update(&mut self, dt: f64) -> Option<::drone::unit_type> {
+        if self.prod_queue.is_empty() == false {
+            let unit = self.prod_queue[0].update(dt);
+            if let Some(_) = unit {
+                self.prod_queue.remove(0);
             }
-            None => None,
+            unit
+        } else {
+            None
         }
     }
 }
@@ -67,13 +69,13 @@ struct Order {
 impl Order {
     fn new_worker() -> Order {
         Order {
-            unit: worker,
+            unit: Worker,
             time_left: 4.0,
         }
     }
     fn new_soldier() -> Order {
         Order {
-            unit: soldier,
+            unit: Soldier,
             time_left: 6.0,
         }
     }
