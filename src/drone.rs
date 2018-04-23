@@ -1,58 +1,68 @@
 use opengl_graphics::*;
 use graphics::*;
+use std::sync::atomic::{self, AtomicUsize};
+use map::*;
+use gsd::*;
+
+static OBJECT_COUNTER: AtomicUsize = atomic::ATOMIC_USIZE_INIT;
+const MAX_CARGO: f64 = 1.0;
 
 use Pos;
 
 #[derive(Debug)]
 pub struct Drone {
+    pub id: usize,
     pub pos: Pos,
     pub rot: f64,
     pub speed: f64,
     pub is_selected: bool,
-    pub target_pos: Pos,
     pub team: u32,
     pub u_type: unit_type,
+    behaviour: Behaviour,
 }
 
 impl Drone {
     pub fn new() -> Drone {
         Drone {
+            id: OBJECT_COUNTER.fetch_add(1, atomic::Ordering::SeqCst),
             pos: Pos { x: 0.0, y: 0.0 },
             rot: 0.0,
             speed: 15.0,
             is_selected: false,
-            target_pos: Pos { x: 100.0, y: 000.0 },
             team: 1,
-            u_type: unit_type::Worker,
+            u_type: unit_type::Worker { cargo: 0.0 },
+            behaviour: Behaviour::Move(Pos { x: 100.0, y: 000.0 }),
         }
     }
     pub fn from_pos_n_type(pos: Pos, typ: unit_type) -> Drone {
         match typ {
-            unit_type::Worker => Drone {
+            unit_type::Worker { cargo } => Drone {
+                id: OBJECT_COUNTER.fetch_add(1, atomic::Ordering::SeqCst),
                 pos,
                 rot: 0.0,
                 speed: 15.0,
                 is_selected: false,
-                target_pos: pos,
                 team: 1,
-                u_type: unit_type::Worker,
+                u_type: unit_type::Worker { cargo: 0.0 },
+                behaviour: Behaviour::Move(pos),
             },
             unit_type::Soldier => Drone {
+                id: OBJECT_COUNTER.fetch_add(1, atomic::Ordering::SeqCst),
                 pos,
                 rot: 0.0,
                 speed: 25.0,
                 is_selected: false,
-                target_pos: pos,
                 team: 1,
                 u_type: unit_type::Soldier,
+                behaviour: Behaviour::Move(pos),
             },
         }
     }
 
-    pub fn walk(&mut self, dt: f64) {
+    fn walk(&mut self, dt: f64, destination: Pos) {
         use std::f64::consts::PI;
         let pi2 = PI * 2.0;
-        let dir = self.target_pos - self.pos;
+        let dir = destination - self.pos;
         let angle = f64::atan2(dir.y, dir.x);
         let diff = (((angle - self.rot) % pi2) + pi2) % pi2;
         let max_turn = dt * 2.0;
@@ -74,8 +84,59 @@ impl Drone {
         self.pos.y += self.speed * dt * self.rot.sin();
     }
 
+    pub fn update(&mut self, dt: f64, map: &Map, gsd: &mut GameStateData) {
+        match self.behaviour {
+            Behaviour::Move(destination) => {
+                self.walk(dt, destination);
+                if (self.pos - destination).mag() < 2.0 {
+                    match self.u_type {
+                        unit_type::Worker { cargo: _ } => {
+                            self.behaviour = Behaviour::Gather(destination)
+                        }
+                        unit_type::Soldier => self.behaviour = Behaviour::Attack(destination),
+                    }
+                }
+            }
+            Behaviour::Gather(location) => {
+                self.walk(dt / 2.0, location);
+                match self.u_type {
+                    unit_type::Worker { ref mut cargo } => {
+                        *cargo += map.value_at(location);
+                        if *cargo >= MAX_CARGO {
+                            self.behaviour = Behaviour::ReturnTb(location);
+                        }
+                    }
+                    unit_type::Soldier => panic!("Invalid behaviour: Soldiers can not Gather"),
+                }
+            }
+            Behaviour::ReturnTb(prev_loc) => {
+                self.walk(dt, Pos { x: 0.0, y: 0.0 });
+                if self.pos.mag() < 2.0 {
+                    match self.u_type {
+                        unit_type::Worker { ref mut cargo } => {
+                            gsd.resources_player_1 += *cargo;
+                            *cargo = 0.0;
+                            self.behaviour = Behaviour::ReturnGathering(prev_loc);
+                        }
+                        unit_type::Soldier => self.behaviour = Behaviour::Idle,
+                    }
+                }
+            }
+            Behaviour::ReturnGathering(destination) => {
+                self.walk(dt, destination);
+                if (self.pos - destination).mag() < 2.0 {
+                    self.behaviour = Behaviour::Gather(destination);
+                }
+            }
+            Behaviour::Attack(loc) => self.walk(dt, loc),
+            Behaviour::Evade(ref d_box, ref beh_box) => {}
+            Behaviour::Persue(ref d_box, ref beh_box) => {}
+            Behaviour::Idle => (),
+        }
+    }
+
     pub fn set_destination(&mut self, destination: Pos) {
-        self.target_pos = destination;
+        self.behaviour = Behaviour::Move(destination);
     }
 
     pub fn draw(
@@ -103,6 +164,18 @@ impl Drone {
 
 #[derive(Debug, Copy, Clone)]
 pub enum unit_type {
-    Worker,
+    Worker { cargo: f64 },
     Soldier,
+}
+
+#[derive(Debug)]
+enum Behaviour {
+    Idle,
+    Move(Pos),
+    Gather(Pos),
+    ReturnTb(Pos),
+    ReturnGathering(Pos),
+    Attack(Pos),
+    Evade(Box<Drone>, Box<Behaviour>),
+    Persue(Box<Drone>, Box<Behaviour>),
 }

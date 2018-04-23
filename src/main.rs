@@ -1,5 +1,6 @@
 extern crate glutin_window;
 extern crate graphics;
+extern crate hprof;
 extern crate opengl_graphics;
 extern crate piston;
 
@@ -14,11 +15,13 @@ use drone::*;
 use base::*;
 use gui::*;
 use map::*;
+use gsd::*;
 
 pub mod drone;
 pub mod base;
 pub mod gui;
 pub mod map;
+pub mod gsd;
 
 const WIDTH: u32 = 1200;
 const HEIGHT: u32 = 800;
@@ -43,6 +46,7 @@ fn main() {
         bases: Vec::new(),
         gui: Gui::new(),
         map: Map::new(),
+        gsd: GameStateData::new(),
     };
     app.drones.push(Drone::new());
     app.bases.push(Base::new());
@@ -54,12 +58,17 @@ fn main() {
     //let mut mouse_s_pos: (f64, f64) = (0.0, 0.0);
     let mut mouse_w_pos: Pos = Pos { x: 0.0, y: 0.0 };
     let mut last_mouse_pos = mouse_w_pos;
+
+    hprof::start_frame();
+    let _h = hprof::enter("main");
     while let Some(e) = events.next(&mut window) {
         // RENDERING
         if let Some(r) = e.render_args() {
+            let _g = hprof::enter("render");
             app.render(&r, x_center, y_center, scale);
         }
         // MOUSE POSITION
+        let _g = hprof::enter("io");
         if let Some(pos) = e.mouse_cursor_args() {
             let mouse_s_pos = (pos[0], pos[1]);
             mouse_w_pos = Pos {
@@ -107,32 +116,40 @@ fn main() {
                 app.get_all_drones(last_mouse_pos, new_mouse_pos);
             }
         }
+        drop(_g);
         // UPDATE
         if let Some(u) = e.update_args() {
+            let _g = hprof::enter("update");
             app.update(&u);
         }
     }
+    drop(_h);
+    hprof::end_frame();
+    hprof::profiler().print_timing();
 }
 
-pub struct App<'a> {
+pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
     drones: Vec<Drone>,
     bases: Vec<Base>,
     gui: Gui,
-    map: Map<'a>,
+    map: Map,
+    gsd: GameStateData,
 }
 
-impl<'a> App<'a> {
+impl App {
     fn render(&mut self, args: &RenderArgs, x_center: f64, y_center: f64, scale: f64) {
         const GREEN: [f32; 4] = [0.1, 0.2, 0.1, 1.0];
 
         let drones = &self.drones;
         let bases = &self.bases;
         let gui = &mut self.gui;
+        let map = &mut self.map;
 
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
             clear(GREEN, gl);
+            map.render(args, gl, &c, x_center, y_center, scale);
 
             for d in drones {
                 d.draw(gl, &c, args.width, args.height, x_center, y_center, scale)
@@ -145,21 +162,27 @@ impl<'a> App<'a> {
         });
     }
 
-    fn update<'a>(&mut'a self, args: &UpdateArgs) {
-        for mut d in &mut self.drones {
-            d.walk(args.dt);
-        }
-
+    fn update(&mut self, args: &UpdateArgs) {
+        let _g = hprof::enter("sort_drones");
         self.map.sort_drones(&self.drones);
-        for mut b in &mut self.bases {
-            let new_drone = b.update(args.dt);
+        drop(_g);
+        let _g = hprof::enter("update_growth");
+        self.map.update_growth(args.dt, &self.drones);
+        drop(_g);
+        let _g = hprof::enter("update drones");
+        for mut d in &mut self.drones {
+            d.update(args.dt, &self.map, &mut self.gsd);
+        }
+        drop(_g);
+
+        let _g = hprof::enter("update bases");
+        for mut ba in &mut self.bases {
+            let new_drone = ba.update(args.dt);
             if let Some(nd) = new_drone {
-                let d = Drone::from_pos_n_type(b.pos, nd);
+                let d = Drone::from_pos_n_type(ba.pos, nd);
                 self.drones.push(d);
-                println!("Drone spawned",);
             }
         }
-
         //println!("{:?} + {}", d, args.dt);
     }
 

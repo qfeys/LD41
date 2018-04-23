@@ -39,12 +39,10 @@ impl Base {
 
     pub fn queue_worker(&mut self) {
         self.prod_queue.push(Order::new_worker());
-        println!("new worker ordered.");
     }
 
     pub fn queue_soldier(&mut self) {
         self.prod_queue.push(Order::new_soldier());
-        println!("new soldier ordered.");
     }
 
     pub fn update(&mut self, dt: f64) -> Option<::drone::unit_type> {
@@ -69,7 +67,7 @@ struct Order {
 impl Order {
     fn new_worker() -> Order {
         Order {
-            unit: Worker,
+            unit: Worker { cargo: 0.0 },
             time_left: 4.0,
         }
     }
