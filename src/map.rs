@@ -1,9 +1,7 @@
 use std::collections::HashMap;
-use std::cmp::Ordering;
 use graphics::*;
 use opengl_graphics::GlGraphics;
 use piston::input::*;
-use drone::*;
 use super::*;
 extern crate hprof;
 
@@ -42,9 +40,9 @@ impl Map {
     }
 
     pub fn sort_drones(&mut self, drones: &Vec<Drone>) {
-    	for ch_dat in self.data.values_mut(){
-    		ch_dat.inhabitants = Vec::new();
-    	}
+        for ch_dat in self.data.values_mut() {
+            ch_dat.inhabitants = Vec::new();
+        }
         for d in drones {
             let x: i32 = (d.pos.x / CHUNK_WIDTH).round() as i32;
             let y: i32 = (d.pos.y / CHUNK_WIDTH).round() as i32;
@@ -59,7 +57,7 @@ impl Map {
             }
             let ch_dat = self.data.entry(chunk).or_insert(ChunkData::default());
             match d.u_type {
-                ::drone::unit_type::Worker { cargo:_ } => if d.team == 1 {
+                ::drone::unit_type::Worker { cargo: _ } => if d.team == 1 {
                     ch_dat.has_workers_t1 = true;
                 } else {
                     ch_dat.has_workers_t2 = true;
@@ -96,13 +94,15 @@ impl Map {
             // Workers effort
             ch_d.growth_progress +=
                 f64::atan(worker_count as f64 / 6.0) * 2.0 / PI * (1.0 - ch_d.growth_progress) * dt;
+            // Base recovery
             if ch_d.growth_progress < 0.1 {
-                ch_d.growth_progress += 0.02 * dt;
+                ch_d.growth_progress += 0.005 * dt;
             } else if ch_d.growth_progress < 0.2 {
-                ch_d.growth_progress += 0.01 * dt;
+                ch_d.growth_progress += 0.0025 * dt;
             }
-            if ch_d.growth_progress > 0.5{
-            	ch_d.growth_progress -= 0.02 * dt;
+            // Base decay
+            if ch_d.growth_progress > 0.5 {
+                ch_d.growth_progress -= 0.01 * dt;
             }
             // Soldiers destruction
             ch_d.growth_progress -= 0.01 * soldeier_count as f64 * dt;
@@ -112,12 +112,17 @@ impl Map {
         }
     }
 
-    pub fn value_at(&self, pos: Pos) -> f64 {
+    pub fn gather_resource(&mut self, pos: Pos, rate: f64, dt: f64) -> f64 {
         let x: i32 = (pos.x / CHUNK_WIDTH).round() as i32;
         let y: i32 = (pos.y / CHUNK_WIDTH).round() as i32;
-        match self.data.get(&Chunk { x, y }) {
-            Some(v) => v.growth_progress,
-            None => 0.2,
+        match self.data.get_mut(&Chunk { x, y }) {
+            Some(v) => {
+                //let a:()=*v;
+                let rsrc = v.growth_progress * rate * dt;
+                v.growth_progress -= rsrc;
+                rsrc
+            }
+            None => panic!("invalid chnunk at x:{}, y:{}", x, y),
         }
     }
 

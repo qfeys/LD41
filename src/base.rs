@@ -3,12 +3,17 @@ use graphics::*;
 
 use Pos;
 use drone::unit_type::*;
+use gsd::*;
+
+const WORKER_COST: f64 = 1.0;
+const SOLDIER_COST: f64 = 1.0;
 
 #[derive(Debug)]
 pub struct Base {
     pub pos: Pos,
     pub rot: f64,
-    prod_queue: Vec<Order>,
+    pub prod_queue: Vec<Order>,
+    pub team: u8,
 }
 
 impl Base {
@@ -17,6 +22,7 @@ impl Base {
             pos: Pos { x: 0.0, y: 0.0 },
             rot: 0.0,
             prod_queue: Vec::new(),
+            team: 1,
         }
     }
 
@@ -37,12 +43,14 @@ impl Base {
         rectangle(BLUE, square, transform, gl);
     }
 
-    pub fn queue_worker(&mut self) {
-        self.prod_queue.push(Order::new_worker());
+    pub fn queue_worker(&mut self, gsd: &mut GameStateData) {
+        if gsd.allocate_resource(WORKER_COST,self.team){
+        self.prod_queue.push(Order::new_worker());}
     }
 
-    pub fn queue_soldier(&mut self) {
-        self.prod_queue.push(Order::new_soldier());
+    pub fn queue_soldier(&mut self, gsd: &mut GameStateData) {
+        if gsd.allocate_resource(SOLDIER_COST,self.team){
+        self.prod_queue.push(Order::new_soldier());}
     }
 
     pub fn update(&mut self, dt: f64) -> Option<::drone::unit_type> {
@@ -59,9 +67,9 @@ impl Base {
 }
 
 #[derive(Debug, Copy, Clone)]
-struct Order {
-    unit: ::drone::unit_type,
-    time_left: f64,
+pub struct Order {
+    pub unit: ::drone::unit_type,
+    pub time_left: f64,
 }
 
 impl Order {
