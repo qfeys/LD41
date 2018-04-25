@@ -6,6 +6,16 @@ use super::*;
 extern crate hprof;
 
 const CHUNK_WIDTH: f64 = 100.0;
+const BORDER_DIRS: [(i32, i32); 8] = [
+    (0, -1),
+    (1, -1),
+    (1, 0),
+    (1, 1),
+    (0, 1),
+    (-1, 1),
+    (-1, 0),
+    (-1, -1),
+];
 
 #[derive(Debug)]
 pub struct Map {
@@ -24,10 +34,7 @@ struct ChunkData {
     inhabitants: Vec<usize>,
     has_workers: Vec<bool>,
     has_soldiers: Vec<bool>,
-    north: Option<Chunk>,
-    east: Option<Chunk>,
-    south: Option<Chunk>,
-    west: Option<Chunk>,
+    borders: [Option<Chunk>; 8],
 }
 
 impl Map {
@@ -44,16 +51,23 @@ impl Map {
             ch_dat.has_soldiers = vec![false; ::NUM_OF_PLAYERS];
         }
         for d in drones {
-            let x: i32 = (d.pos.x / CHUNK_WIDTH).round() as i32;
-            let y: i32 = (d.pos.y / CHUNK_WIDTH).round() as i32;
-            let chunk_found = self.data.contains_key(&Chunk { x, y });
-            let chunk;
+            let chunk = Chunk::pos_to_chunk(d.pos);
+            let chunk_found = self.data.contains_key(&chunk);
+            let x = chunk.x;
+            let y = chunk.y;
             if chunk_found == false {
-                chunk = Chunk { x, y };
                 self.data.insert(chunk, ChunkData::default());
-            //println!("New Chunk at :{}, {}", x, y);
-            } else {
-                chunk = Chunk { x, y };
+                for dir in 0..BORDER_DIRS.len() {
+                    let test_chunk = Chunk {
+                        x: x + BORDER_DIRS[dir].0,
+                        y: y + BORDER_DIRS[dir].1,
+                    };
+                    if self.data.contains_key(&test_chunk) {
+                        self.data.get_mut(&chunk).unwrap().borders[dir] = Some(test_chunk);
+                        self.data.get_mut(&test_chunk).unwrap().borders[(dir + 4) % 8] =
+                            Some(test_chunk);
+                    }
+                }
             }
             let ch_dat = self.data.entry(chunk).or_insert(ChunkData::default());
             match d.u_type {
@@ -121,6 +135,29 @@ impl Map {
         }
     }
 
+    // Returns id numbers of possible nearby enemies.
+    // Being an enemy is not garanteed
+    // Alies will definatly not always be given
+    pub fn find_enemies(&self, pos: Pos, team: u8) -> Vec<usize> {
+        let chunk = Chunk::pos_to_chunk(pos);
+        let mut ret = Vec::new();
+        if self.data[&chunk].contains_enemy_workers(team)
+            || self.data[&chunk].contains_enemy_soldiers(team)
+        {
+            ret.extend_from_slice(&self.data[&chunk].inhabitants);
+        }
+        for dir in 0..BORDER_DIRS.len() {
+            if let Some(ch) = self.data[&chunk].borders[dir] {
+                if self.data[&ch].contains_enemy_workers(team)
+                    || self.data[&ch].contains_enemy_soldiers(team)
+                {
+                    ret.extend_from_slice(&self.data[&ch].inhabitants);
+                }
+            }
+        }
+        ret
+    }
+
     pub fn render(
         &mut self,
         args: &RenderArgs,
@@ -143,6 +180,15 @@ impl Map {
     }
 }
 
+impl Chunk {
+    pub fn pos_to_chunk(pos: Pos) -> Chunk {
+        Chunk {
+            x: (pos.x / CHUNK_WIDTH).round() as i32,
+            y: (pos.y / CHUNK_WIDTH).round() as i32,
+        }
+    }
+}
+
 impl ChunkData {
     pub fn default() -> ChunkData {
         ChunkData {
@@ -150,10 +196,31 @@ impl ChunkData {
             inhabitants: Vec::new(),
             has_workers: vec![false; ::NUM_OF_PLAYERS],
             has_soldiers: vec![false; ::NUM_OF_PLAYERS],
-            north: None,
-            east: None,
-            south: None,
-            west: None,
+            borders: [None; 8],
         }
+    }
+
+    pub fn contains_enemy_workers(&self, my_team: u8) -> bool {
+        for team in 0..::NUM_OF_PLAYERS {
+            if team == my_team as usize {
+                continue;
+            }
+            if self.has_workers[team] {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn contains_enemy_soldiers(&self, my_team: u8) -> bool {
+        for team in 0..::NUM_OF_PLAYERS {
+            if team == my_team as usize {
+                continue;
+            }
+            if self.has_soldiers[team] {
+                return true;
+            }
+        }
+        false
     }
 }

@@ -181,8 +181,12 @@ impl App {
         self.map.update_growth(args.dt, &self.drones);
         drop(_g);
         let _g = hprof::enter("update drones");
+        let mut drone_list: Vec<(usize, Pos, u8)> = Vec::new(); // (id, pos, team)
+        for d in &self.drones {
+            drone_list.push((d.id, d.pos, d.team));
+        }
         for mut d in &mut self.drones {
-            d.update(args.dt, &mut self.map, &mut self.gsd);
+            d.update(args.dt, &mut self.map, &mut self.gsd, &drone_list);
         }
         drop(_g);
 

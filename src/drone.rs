@@ -60,7 +60,13 @@ impl Drone {
         }
     }
 
-    pub fn update(&mut self, dt: f64, map: &mut Map, gsd: &mut GameStateData) {
+    pub fn update(
+        &mut self,
+        dt: f64,
+        map: &mut Map,
+        gsd: &mut GameStateData,
+        drone_list: &Vec<(usize, Pos, u8)>,
+    ) {
         match self.behaviour {
             Behaviour::Move(destination) => {
                 self.walk(dt, destination);
@@ -106,9 +112,36 @@ impl Drone {
                     self.behaviour = Behaviour::Gather(destination);
                 }
             }
-            Behaviour::Attack(loc) => self.walk(dt, loc),
-            Behaviour::Evade(ref d_box, ref beh_box) => {}
-            Behaviour::Persue(ref d_box, ref beh_box) => {}
+            Behaviour::Attack(loc) => {
+                let ens = map.find_enemies(self.pos, self.team);
+                if ens.len() != 0 {
+                    let mut enemies: Vec<(usize, f64, Pos)> = Vec::new();
+                    for e in ens {
+                        let e = Drone::get_data_from_drone_list(e, &drone_list);
+                        if e.2 != self.team {
+                            enemies.push((e.0, (e.1 - self.pos).mag(), e.1));
+                        }
+                    }
+                    if enemies.len() != 0 {
+                        let closest = enemies
+                            .iter()
+                            .min_by(|e1, e2| e1.1.partial_cmp(&e2.1).unwrap())
+                            .unwrap();
+                        //self.behaviour = Behaviour::Persue(closest.0, closest.2, Box::new(self.behaviour));
+                        let old_behafiour = ::std::mem::replace(
+                            &mut self.behaviour,
+                            Behaviour::Persue(closest.0, closest.2, Box::new(Behaviour::Idle)),
+                        );
+                        ::std::mem::replace(
+                            &mut self.behaviour,
+                            Behaviour::Persue(closest.0, closest.2, Box::new(old_behafiour)),
+                        );
+                    }
+                }
+                self.walk(dt, loc);
+            }
+            Behaviour::Evade(id, prev_pos, ref beh_box) => {}
+            Behaviour::Persue(id, prev_pos, ref beh_box) => {}
             Behaviour::Idle => (),
         }
     }
@@ -140,6 +173,15 @@ impl Drone {
 
     pub fn set_destination(&mut self, destination: Pos) {
         self.behaviour = Behaviour::Move(destination);
+    }
+
+    fn get_data_from_drone_list(id: usize, drone_list: &Vec<(usize, Pos, u8)>) -> (usize, Pos, u8) {
+        for d in drone_list {
+            if id == d.0 {
+                return *d;
+            }
+        }
+        panic!("Drone id {} not in drone_list.", id);
     }
 
     pub fn draw(
@@ -179,6 +221,6 @@ enum Behaviour {
     ReturnTb(Pos),
     ReturnGathering(Pos),
     Attack(Pos),
-    Evade(Box<Drone>, Box<Behaviour>),
-    Persue(Box<Drone>, Box<Behaviour>),
+    Evade(usize, Pos, Box<Behaviour>),
+    Persue(usize, Pos, Box<Behaviour>),
 }

@@ -8,7 +8,7 @@ pub struct GameStateData {
 
 impl GameStateData {
     pub fn new(base_locations: Vec<Pos>) -> GameStateData {
-        if base_locations.len() != ::NUM_OF_PLAYERS{
+        if base_locations.len() != ::NUM_OF_PLAYERS {
             panic!(
                 "You gave {} base locations but {} teams.",
                 base_locations.len(),
