@@ -189,8 +189,15 @@ impl App {
         for d in &self.drones {
             drone_list.push((d.id, d.pos, d.team));
         }
+        let mut attack_log: Vec<(usize, usize)> = Vec::new(); // attacker, defender
         for mut d in &mut self.drones {
-            d.update(args.dt, &mut self.map, &mut self.gsd, &drone_list);
+            d.update(
+                args.dt,
+                &mut self.map,
+                &mut self.gsd,
+                &drone_list,
+                &mut attack_log,
+            );
         }
         drop(_g);
 

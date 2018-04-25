@@ -72,12 +72,13 @@ impl Drone {
         map: &mut Map,
         gsd: &mut GameStateData,
         drone_list: &Vec<(usize, Pos, u8)>,
+        attack_log: &mut Vec<(usize, usize)>,
     ) {
         match self.behaviour {
             Behaviour::Move(destination) => {
                 let st = steering::seek(self, destination);
-                let ms =self.max_speed;
-                self.step(st,ms, dt);
+                let ms = self.max_speed;
+                self.step(st, ms, dt);
                 if (self.pos - destination).mag() < 5.0 {
                     match self.u_type {
                         unit_type::Worker { cargo: _ } => {
@@ -103,14 +104,14 @@ impl Drone {
                 if let Behaviour::Gather(_, ref mut wan) = self.behaviour {
                     *wan = wander;
                 }
-                let ms =self.max_speed/3.0;
-                self.step(st,ms, dt);
+                let ms = self.max_speed / 3.0;
+                self.step(st, ms, dt);
             }
             Behaviour::ReturnTb(prev_loc) => {
                 let t = self.team as usize;
                 let st = steering::seek(self, gsd.base_locations[t]);
-                let ms =self.max_speed;
-                self.step(st,ms, dt);
+                let ms = self.max_speed;
+                self.step(st, ms, dt);
                 if (self.pos - gsd.base_locations[t]).mag() < 8.0 {
                     match self.u_type {
                         unit_type::Worker { ref mut cargo } => {
@@ -124,8 +125,8 @@ impl Drone {
             }
             Behaviour::ReturnGathering(destination) => {
                 let st = steering::seek(self, destination);
-                let ms =self.max_speed;
-                self.step(st,ms, dt);
+                let ms = self.max_speed;
+                self.step(st, ms, dt);
                 if (self.pos - destination).mag() < 5.0 {
                     self.behaviour = Behaviour::Gather(destination, Pos { x: 0.1, y: 0.0 });
                 }
@@ -158,8 +159,42 @@ impl Drone {
                 }
                 steering::walk(self, dt, loc);
             }
-            Behaviour::Evade(id, prev_pos, ref beh_box) => {}
-            Behaviour::Persue(id, prev_pos, ref beh_box) => {}
+            Behaviour::Evade(_id, _prev_pos, ref _beh_box) => {}
+            Behaviour::Persue(id, prev_pos, _) => {
+                let enemy = Drone::get_data_from_drone_list_save(id, drone_list);
+                let mut next_behaviour = None;
+                match enemy {
+                    None => {
+                        if let Behaviour::Persue(_, _, ref beh_box) = self.behaviour {
+                            next_behaviour = Some((**beh_box).clone());
+                        }
+                    }
+                    Some(enemy) => {
+                        let eta = (prev_pos - self.pos).mag() / self.max_speed;
+                        let enemy_vel = (enemy.1 - prev_pos) * (1.0 / dt);
+                        let est_en_pos = enemy.1 + enemy_vel * eta;
+                        let eta = (est_en_pos - self.pos).mag() / self.max_speed;
+                        let est_en_pos = enemy.1 + enemy_vel * eta;
+                        let steering_vector = steering::seek(self, est_en_pos);
+                        let ms = self.max_speed;
+                        self.step(steering_vector, ms, dt);
+                        match self.u_type {
+                            unit_type::Worker { cargo: _ } => panic!("Workers do not persue"),
+                            unit_type::Soldier => {
+                                if (enemy.1 - self.pos).mag() < 2.0 {
+                                    attack_log.push((self.id, id));
+                                }
+                            }
+                        }
+                        if let Behaviour::Persue(_, ref mut new_pos, _) = self.behaviour {
+                            *new_pos = enemy.1;
+                        }
+                    }
+                }
+                if let Some(beh) = next_behaviour {
+                    self.behaviour = beh;
+                }
+            }
             Behaviour::Idle => (),
         }
     }
@@ -175,6 +210,18 @@ impl Drone {
             }
         }
         panic!("Drone id {} not in drone_list.", id);
+    }
+
+    fn get_data_from_drone_list_save(
+        id: usize,
+        drone_list: &Vec<(usize, Pos, u8)>,
+    ) -> Option<(usize, Pos, u8)> {
+        for d in drone_list {
+            if id == d.0 {
+                return Some(*d);
+            }
+        }
+        None
     }
 
     pub fn draw(
@@ -206,7 +253,7 @@ pub enum unit_type {
     Soldier,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Behaviour {
     Idle,
     Move(Pos),
@@ -217,3 +264,9 @@ enum Behaviour {
     Evade(usize, Pos, Box<Behaviour>),
     Persue(usize, Pos, Box<Behaviour>),
 }
+
+// impl Clone for Behaviour {
+//     fn clone(&self) -> Behaviour {
+//         Behaviour{ ..self}
+//     }
+// }
