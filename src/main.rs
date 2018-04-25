@@ -280,3 +280,34 @@ impl Sub for Pos {
         }
     }
 }
+
+use std::ops::Add;
+
+impl Add for Pos {
+    type Output = Pos;
+    fn add(self, other: Pos) -> Pos {
+        Pos {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+}
+
+use std::ops::Mul;
+
+impl Mul<f64> for Pos {
+    type Output = Pos;
+    fn mul(self, other: f64) -> Pos {
+        Pos {
+            x: self.x * other,
+            y: self.y * other,
+        }
+    }
+}
+
+impl Mul for Pos {
+    type Output = f64;
+    fn mul(self, other: Pos) -> f64 {
+        self.x * other.x + self.y * other.y
+    }
+}
