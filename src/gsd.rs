@@ -4,6 +4,7 @@ use Pos;
 pub struct GameStateData {
     pub resources_players: Vec<f64>,
     pub base_locations: Vec<Pos>,
+    pub debug_line: String,
 }
 
 impl GameStateData {
@@ -18,6 +19,7 @@ impl GameStateData {
         GameStateData {
             resources_players: vec![1.0; ::NUM_OF_PLAYERS],
             base_locations,
+            debug_line: String::from(""),
         }
     }
 

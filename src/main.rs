@@ -75,7 +75,11 @@ fn main() {
                 app.render(&r, x_center, y_center, scale);
             }
             {
-                cui::print(app.gsd.resources_players[0], &app.bases[0].prod_queue);
+                cui::print(
+                    app.gsd.resources_players[0],
+                    &app.bases[0].prod_queue,
+                    &app.gsd.debug_line,
+                );
             }
         }
         // MOUSE POSITION
@@ -261,6 +265,9 @@ impl Pos {
     }
 
     pub fn norm(self, length: f64) -> Pos {
+        if self.mag() == 0.0 {
+            return Pos { x: 0.0, y: 0.0 };
+        }
         let factor = length / self.mag();
         Pos {
             x: self.x * factor,

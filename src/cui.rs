@@ -4,7 +4,7 @@ use drone::*;
 use base::*;
 
 #[allow(unused_must_use)]
-pub fn print(resources: f64, prod_queue: &Vec<Order>) {
+pub fn print(resources: f64, prod_queue: &Vec<Order>, debug_line: &str) {
     let mut lines = 0;
     let term = console::Term::stdout();
     let width = term.size().0;
@@ -36,17 +36,23 @@ pub fn print(resources: f64, prod_queue: &Vec<Order>) {
         width,
     );
     lines += 1;
+    output = add_line(output, debug_line, width);
+    lines += 1;
     term.write_line(output.as_str());
     term.move_cursor_up(lines);
 }
 
 fn add_line(origin: String, new: &str, len: u16) -> String {
-    let space = len - new.len() as u16;
-    let mut spaces = String::from("");
-    for _i in 0..space {
-        spaces.push_str(" ");
+    if len as usize > new.len() {
+        let space = len - new.len() as u16;
+        let mut spaces = String::from("");
+        for _i in 0..space {
+            spaces.push_str(" ");
+        }
+        origin + "\n" + new + spaces.as_str()
+    } else {
+        origin + "\n" + new
     }
-    origin + "\n" + new + spaces.as_str()
 }
 
 fn progress_bar(progress: f64, car_per_unit: f64) -> String {

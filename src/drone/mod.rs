@@ -3,6 +3,7 @@ use graphics::*;
 use std::sync::atomic::{self, AtomicUsize};
 use map::*;
 use gsd::*;
+use std::f64::*;
 use Pos;
 
 mod steering;
@@ -74,23 +75,23 @@ impl Drone {
     ) {
         match self.behaviour {
             Behaviour::Move(destination) => {
-                steering::walk(self, dt, destination);
                 let st = steering::seek(self, destination);
-                self.step(st, dt);
-                if (self.pos - destination).mag() < 2.0 {
+                let ms =self.max_speed;
+                self.step(st,ms, dt);
+                if (self.pos - destination).mag() < 5.0 {
                     match self.u_type {
                         unit_type::Worker { cargo: _ } => {
-                            self.behaviour = Behaviour::Gather(destination)
+                            self.behaviour = Behaviour::Gather(destination, Pos { x: 0.0, y: 0.0 })
                         }
                         unit_type::Soldier => self.behaviour = Behaviour::Attack(destination),
                     }
                 }
             }
-            Behaviour::Gather(location) => {
-                steering::walk(self, dt / 4.0, location);
+            Behaviour::Gather(location, mut wander) => {
+                //steering::walk(self, dt / 4.0, location);
                 match self.u_type {
                     unit_type::Worker { ref mut cargo } => {
-                        *cargo += map.gather_resource(location, GATHER_RATE, dt);
+                        *cargo += map.gather_resource(self.pos, GATHER_RATE, dt);
                         if *cargo >= MAX_CARGO {
                             *cargo = MAX_CARGO;
                             self.behaviour = Behaviour::ReturnTb(location);
@@ -98,12 +99,19 @@ impl Drone {
                     }
                     unit_type::Soldier => panic!("Invalid behaviour: Soldiers can not Gather"),
                 }
+                let st = steering::wander(self, 6.0, 18.0, &mut wander, dt);
+                if let Behaviour::Gather(_, ref mut wan) = self.behaviour {
+                    *wan = wander;
+                }
+                let ms =self.max_speed/3.0;
+                self.step(st,ms, dt);
             }
             Behaviour::ReturnTb(prev_loc) => {
                 let t = self.team as usize;
                 let st = steering::seek(self, gsd.base_locations[t]);
-                self.step(st, dt);
-                if self.pos.mag() < 2.0 {
+                let ms =self.max_speed;
+                self.step(st,ms, dt);
+                if (self.pos - gsd.base_locations[t]).mag() < 8.0 {
                     match self.u_type {
                         unit_type::Worker { ref mut cargo } => {
                             gsd.deposite_resource(*cargo, self.team);
@@ -115,9 +123,11 @@ impl Drone {
                 }
             }
             Behaviour::ReturnGathering(destination) => {
-                steering::walk(self, dt, destination);
-                if (self.pos - destination).mag() < 2.0 {
-                    self.behaviour = Behaviour::Gather(destination);
+                let st = steering::seek(self, destination);
+                let ms =self.max_speed;
+                self.step(st,ms, dt);
+                if (self.pos - destination).mag() < 5.0 {
+                    self.behaviour = Behaviour::Gather(destination, Pos { x: 0.1, y: 0.0 });
                 }
             }
             Behaviour::Attack(loc) => {
@@ -200,7 +210,7 @@ pub enum unit_type {
 enum Behaviour {
     Idle,
     Move(Pos),
-    Gather(Pos),
+    Gather(Pos, Pos),
     ReturnTb(Pos),
     ReturnGathering(Pos),
     Attack(Pos),

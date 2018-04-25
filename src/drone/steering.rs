@@ -1,3 +1,5 @@
+extern crate rand;
+
 use Pos;
 use Drone;
 
@@ -10,8 +12,22 @@ pub fn seek(drone: &Drone, target: Pos) -> Pos {
     steering
 }
 
+pub fn wander(drone: &Drone, strength: f64, rate: f64, acc: &mut Pos, dt: f64) -> Pos {
+    let r = (self::rand::random(), self::rand::random());
+    if self::rand::random::<f64>() < dt * 2.0 {
+        *acc = (*acc + Pos { x: r.0, y: r.1 }.norm(strength)).norm(rate);
+    }
+    let vel_angle = f64::atan2(drone.vel.y, drone.vel.x);
+    let rot_acc = Pos {
+        x: acc.x * f64::cos(vel_angle) - acc.y * f64::sin(vel_angle),
+        y: acc.x * f64::sin(vel_angle) + acc.y * f64::cos(vel_angle),
+    };
+    let steering = drone.vel + rot_acc;
+    steering
+}
+
 impl Drone {
-    pub fn step(&mut self, steering: Pos, dt: f64) {
+    pub fn step(&mut self, steering: Pos, max_speed: f64, dt: f64) {
         let acc = self.max_force / MASS;
         let mut dv = steering.norm(acc) * dt;
         // Decompose delta v vector
@@ -21,8 +37,8 @@ impl Drone {
             dv = fwd * 2.0 + side;
         }
         self.vel = self.vel + dv;
-        if self.vel.mag() > self.max_speed {
-            self.vel = self.vel.norm(self.max_speed);
+        if self.vel.mag() > max_speed {
+            self.vel = self.vel.norm(max_speed);
         }
         let dp = self.vel * dt;
         self.pos = self.pos + dp;
