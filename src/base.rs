@@ -5,13 +5,13 @@ use Pos;
 use drone::unit_type::*;
 use gsd::*;
 
+const DISTANCE_BASES: f64 = 400.0;
 const WORKER_COST: f64 = 1.0;
 const SOLDIER_COST: f64 = 1.0;
 
 #[derive(Debug)]
 pub struct Base {
     pub pos: Pos,
-    pub rot: f64,
     pub prod_queue: Vec<Order>,
     pub team: u8,
 }
@@ -20,10 +20,27 @@ impl Base {
     pub fn new() -> Base {
         Base {
             pos: Pos { x: 0.0, y: 0.0 },
-            rot: 0.0,
             prod_queue: Vec::new(),
             team: 1,
         }
+    }
+
+    pub fn all_new() -> Vec<Base> {
+        use std::f64::consts::PI;
+        let mut v = Vec::new();
+        let radius = DISTANCE_BASES / (2.0 * f64::sin(PI / ::NUM_OF_PLAYERS as f64));
+        for team in 0..::NUM_OF_PLAYERS {
+            let pos = Pos {
+                x: radius * f64::cos(team as f64 / ::NUM_OF_PLAYERS as f64 * 2.0 * PI),
+                y: radius * f64::sin(team as f64 / ::NUM_OF_PLAYERS as f64 * 2.0 * PI),
+            };
+            v.push(Base {
+                pos,
+                prod_queue: Vec::new(),
+                team: team as u8,
+            });
+        }
+        v
     }
 
     pub fn draw(
@@ -44,13 +61,15 @@ impl Base {
     }
 
     pub fn queue_worker(&mut self, gsd: &mut GameStateData) {
-        if gsd.allocate_resource(WORKER_COST,self.team){
-        self.prod_queue.push(Order::new_worker());}
+        if gsd.allocate_resource(WORKER_COST, self.team) {
+            self.prod_queue.push(Order::new_worker());
+        }
     }
 
     pub fn queue_soldier(&mut self, gsd: &mut GameStateData) {
-        if gsd.allocate_resource(SOLDIER_COST,self.team){
-        self.prod_queue.push(Order::new_soldier());}
+        if gsd.allocate_resource(SOLDIER_COST, self.team) {
+            self.prod_queue.push(Order::new_soldier());
+        }
     }
 
     pub fn update(&mut self, dt: f64) -> Option<::drone::unit_type> {

@@ -26,6 +26,7 @@ pub mod cui;
 
 const WIDTH: u32 = 1200;
 const HEIGHT: u32 = 800;
+const NUM_OF_PLAYERS: usize = 2;
 
 #[allow(unused_mut)]
 
@@ -41,13 +42,18 @@ fn main() {
         .unwrap();
 
     // Create a new game and run it.
+    let bases = Base::all_new();
+    let mut base_locs = Vec::new();
+    for base in &bases {
+        base_locs.push(base.pos);
+    }
     let mut app = App {
         gl: GlGraphics::new(opengl),
         drones: Vec::new(),
-        base: Base::new(),
+        bases,
         gui: Gui::new(),
         map: Map::new(),
-        gsd: GameStateData::new(),
+        gsd: GameStateData::new(base_locs),
     };
     app.drones.push(Drone::new());
 
@@ -69,7 +75,7 @@ fn main() {
                 app.render(&r, x_center, y_center, scale);
             }
             {
-                cui::print(app.gsd.resources_player_1, &app.base.prod_queue);
+                cui::print(app.gsd.resources_players[0], &app.bases[0].prod_queue);
             }
         }
         // MOUSE POSITION
@@ -105,10 +111,10 @@ fn main() {
                     app.set_destination_selection(mouse_w_pos);
                 }
                 Button::Keyboard(Key::A) => {
-                    app.base.queue_worker(&mut app.gsd);
+                    app.bases[0].queue_worker(&mut app.gsd);
                 }
                 Button::Keyboard(Key::S) => {
-                    app.base.queue_soldier(&mut app.gsd);
+                    app.bases[0].queue_soldier(&mut app.gsd);
                 }
                 _ => (),
             }
@@ -136,7 +142,7 @@ fn main() {
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
     drones: Vec<Drone>,
-    base: Base,
+    bases: Vec<Base>,
     gui: Gui,
     map: Map,
     gsd: GameStateData,
@@ -147,7 +153,7 @@ impl App {
         const GREEN: [f32; 4] = [0.1, 0.2, 0.1, 1.0];
 
         let drones = &self.drones;
-        let base = &self.base;
+        let bases = &self.bases;
         let gui = &mut self.gui;
         let map = &mut self.map;
 
@@ -159,7 +165,9 @@ impl App {
             for d in drones {
                 d.draw(gl, &c, args.width, args.height, x_center, y_center, scale)
             }
-            base.draw(gl, &c, args.width, args.height, x_center, y_center, scale);
+            for b in bases {
+                b.draw(gl, &c, args.width, args.height, x_center, y_center, scale);
+            }
 
             gui.render(args, gl, &c, x_center, y_center, scale);
         });
@@ -179,10 +187,12 @@ impl App {
         drop(_g);
 
         let _g = hprof::enter("update base");
-        let new_drone = self.base.update(args.dt);
-        if let Some(nd) = new_drone {
-            let d = Drone::from_pos_n_type(self.base.pos, nd);
-            self.drones.push(d);
+        for mut b in &mut self.bases {
+            let new_drone = b.update(args.dt);
+            if let Some(nd) = new_drone {
+                let d = Drone::from_pos_n_type(b.pos, nd);
+                self.drones.push(d);
+            }
         }
         //println!("{:?} + {}", d, args.dt);
     }

@@ -22,10 +22,8 @@ struct Chunk {
 struct ChunkData {
     growth_progress: f64,
     inhabitants: Vec<usize>,
-    has_workers_t1: bool,
-    has_workers_t2: bool,
-    has_soldiers_t1: bool,
-    has_soldiers_t2: bool,
+    has_workers: Vec<bool>,
+    has_soldiers: Vec<bool>,
     north: Option<Chunk>,
     east: Option<Chunk>,
     south: Option<Chunk>,
@@ -42,6 +40,8 @@ impl Map {
     pub fn sort_drones(&mut self, drones: &Vec<Drone>) {
         for ch_dat in self.data.values_mut() {
             ch_dat.inhabitants = Vec::new();
+            ch_dat.has_workers = vec![false; ::NUM_OF_PLAYERS];
+            ch_dat.has_soldiers = vec![false; ::NUM_OF_PLAYERS];
         }
         for d in drones {
             let x: i32 = (d.pos.x / CHUNK_WIDTH).round() as i32;
@@ -57,16 +57,11 @@ impl Map {
             }
             let ch_dat = self.data.entry(chunk).or_insert(ChunkData::default());
             match d.u_type {
-                ::drone::unit_type::Worker { cargo: _ } => if d.team == 1 {
-                    ch_dat.has_workers_t1 = true;
-                } else {
-                    ch_dat.has_workers_t2 = true;
-                },
-                ::drone::unit_type::Soldier => if d.team == 1 {
-                    ch_dat.has_soldiers_t1 = true;
-                } else {
-                    ch_dat.has_soldiers_t2 = true;
-                },
+                ::drone::unit_type::Worker { cargo: _ } => {
+                    ch_dat.has_workers[d.team as usize] = true
+                }
+
+                ::drone::unit_type::Soldier => ch_dat.has_soldiers[d.team as usize] = true,
             };
             ch_dat.inhabitants.push(d.id);
         }
@@ -153,10 +148,8 @@ impl ChunkData {
         ChunkData {
             growth_progress: 0.2,
             inhabitants: Vec::new(),
-            has_workers_t1: false,
-            has_workers_t2: false,
-            has_soldiers_t1: false,
-            has_soldiers_t2: false,
+            has_workers: vec![false; ::NUM_OF_PLAYERS],
+            has_soldiers: vec![false; ::NUM_OF_PLAYERS],
             north: None,
             east: None,
             south: None,

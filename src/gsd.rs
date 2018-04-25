@@ -1,39 +1,35 @@
+use Pos;
+
 #[derive(Debug)]
 pub struct GameStateData {
-    pub resources_player_1: f64,
-    pub resources_player_2: f64,
+    pub resources_players: Vec<f64>,
+    pub base_locations: Vec<Pos>,
 }
 
 impl GameStateData {
-    pub fn new() -> GameStateData {
+    pub fn new(base_locations: Vec<Pos>) -> GameStateData {
+        if base_locations.len() != ::NUM_OF_PLAYERS{
+            panic!(
+                "You gave {} base locations but {} teams.",
+                base_locations.len(),
+                ::NUM_OF_PLAYERS
+            );
+        }
         GameStateData {
-            resources_player_1: 0.0,
-            resources_player_2: 0.0,
+            resources_players: vec![1.0; ::NUM_OF_PLAYERS],
+            base_locations,
         }
     }
 
-    pub fn deposite_resource(&mut self, amount: f64, team: u8){
-    	if team == 1{
-    		self.resources_player_1 += amount;
-    	}else if team == 2{
-    		self.resources_player_2 += amount;
-    	}else{
-    		panic!("Invalid team. You tried giving team {:?} resources.", team);
-    	}
+    pub fn deposite_resource(&mut self, amount: f64, team: u8) {
+        self.resources_players[team as usize] += amount;
     }
 
-    pub fn allocate_resource(&mut self, amount: f64, team: u8) -> bool{
-    	if team == 1{
-    		if self.resources_player_1 >= amount{
-    		self.resources_player_1 -= amount;
-    		return true;}
-    	}else if team == 2{
-    		if self.resources_player_2 >= amount{
-    		self.resources_player_2 -= amount;
-    		return true;}
-    	}else{
-    		panic!("Invalid team. You tried giving team {:?} resources.", team);
-    	}
-    	false
+    pub fn allocate_resource(&mut self, amount: f64, team: u8) -> bool {
+        if self.resources_players[team as usize] >= amount {
+            self.resources_players[team as usize] -= amount;
+            return true;
+        }
+        false
     }
 }

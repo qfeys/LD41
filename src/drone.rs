@@ -30,7 +30,7 @@ impl Drone {
             rot: 0.0,
             speed: 15.0,
             is_selected: false,
-            team: 1,
+            team: 0,
             u_type: unit_type::Worker { cargo: 0.0 },
             behaviour: Behaviour::Move(Pos { x: 100.0, y: 000.0 }),
         }
@@ -43,7 +43,7 @@ impl Drone {
                 rot: 0.0,
                 speed: 15.0,
                 is_selected: false,
-                team: 1,
+                team: 0,
                 u_type: unit_type::Worker { cargo: 0.0 },
                 behaviour: Behaviour::Move(pos),
             },
@@ -53,7 +53,7 @@ impl Drone {
                 rot: 0.0,
                 speed: 25.0,
                 is_selected: false,
-                team: 1,
+                team: 0,
                 u_type: unit_type::Soldier,
                 behaviour: Behaviour::Move(pos),
             },
@@ -87,7 +87,8 @@ impl Drone {
                 }
             }
             Behaviour::ReturnTb(prev_loc) => {
-                self.walk(dt, Pos { x: 0.0, y: 0.0 });
+                let t = self.team as usize;
+                self.walk(dt, gsd.base_locations[t]);
                 if self.pos.mag() < 2.0 {
                     match self.u_type {
                         unit_type::Worker { ref mut cargo } => {
