@@ -23,6 +23,7 @@ pub mod gui;
 pub mod map;
 pub mod gsd;
 pub mod cui;
+pub mod color;
 
 const WIDTH: u32 = 1200;
 const HEIGHT: u32 = 800;

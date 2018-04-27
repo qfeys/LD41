@@ -53,11 +53,10 @@ impl Base {
         y_center: f64,
         scale: f64,
     ) {
-        const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 0.8];
         let square = rectangle::square(0.0, 0.0, 10.0);
         let transform = self.pos
             .s_cor(c, s_width, s_height, x_center, y_center, scale);
-        rectangle(BLUE, square, transform, gl);
+        rectangle(::color::soft(::color::team(self.team)), square, transform, gl);
     }
 
     pub fn queue_worker(&mut self, gsd: &mut GameStateData) {
