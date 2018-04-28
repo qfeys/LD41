@@ -132,6 +132,9 @@ impl Drone {
                 }
             }
             Behaviour::Attack(loc) => {
+                let st = steering::seek(self, loc);
+                let ms = self.max_speed;
+                self.step(st, ms, dt);
                 let ens = map.find_enemies(self.pos, self.team);
                 if ens.len() != 0 {
                     let mut enemies: Vec<(usize, f64, Pos)> = Vec::new();
@@ -157,7 +160,6 @@ impl Drone {
                         );
                     }
                 }
-                steering::walk(self, dt, loc);
             }
             Behaviour::Evade(_id, _prev_pos, ref _beh_box) => {}
             Behaviour::Persue(id, prev_pos, _) => {
