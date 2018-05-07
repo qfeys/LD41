@@ -45,28 +45,28 @@ impl Drone {
     }
 }
 
-pub fn walk(drone: &mut Drone, dt: f64, destination: Pos) {
-    use std::f64::consts::PI;
-    let mut rot = f64::atan2(drone.vel.y, drone.vel.x);
-    let pi2 = PI * 2.0;
-    let dir = destination - drone.pos;
-    let angle = f64::atan2(dir.y, dir.x);
-    let diff = (((angle - rot) % pi2) + pi2) % pi2;
-    let max_turn = dt * 2.0;
-    if diff < PI {
-        if diff > PI * 2.0 - max_turn {
-            rot += diff;
-        } else {
-            rot += max_turn;
-        }
-    } else {
-        if diff < max_turn {
-            rot -= diff;
-        } else {
-            rot -= max_turn
-        }
-    }
-    rot = ((rot % pi2) + pi2) % pi2;
-    drone.pos.x += drone.max_speed * dt * rot.cos();
-    drone.pos.y += drone.max_speed * dt * rot.sin();
-}
+// pub fn walk(drone: &mut Drone, dt: f64, destination: Pos) {
+//     use std::f64::consts::PI;
+//     let mut rot = f64::atan2(drone.vel.y, drone.vel.x);
+//     let pi2 = PI * 2.0;
+//     let dir = destination - drone.pos;
+//     let angle = f64::atan2(dir.y, dir.x);
+//     let diff = (((angle - rot) % pi2) + pi2) % pi2;
+//     let max_turn = dt * 2.0;
+//     if diff < PI {
+//         if diff > PI * 2.0 - max_turn {
+//             rot += diff;
+//         } else {
+//             rot += max_turn;
+//         }
+//     } else {
+//         if diff < max_turn {
+//             rot -= diff;
+//         } else {
+//             rot -= max_turn
+//         }
+//     }
+//     rot = ((rot % pi2) + pi2) % pi2;
+//     drone.pos.x += drone.max_speed * dt * rot.cos();
+//     drone.pos.y += drone.max_speed * dt * rot.sin();
+// }

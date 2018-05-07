@@ -16,6 +16,7 @@ use base::*;
 use gui::*;
 use map::*;
 use gsd::*;
+use aicontr::*;
 
 pub mod drone;
 pub mod base;
@@ -24,6 +25,7 @@ pub mod map;
 pub mod gsd;
 pub mod cui;
 pub mod color;
+pub mod aicontr;
 
 const WIDTH: u32 = 1200;
 const HEIGHT: u32 = 800;
@@ -55,7 +57,11 @@ fn main() {
         gui: Gui::new(),
         map: Map::new(),
         gsd: GameStateData::new(base_locs),
+        ais: Vec::new(),
     };
+    for i in 1..NUM_OF_PLAYERS {
+        app.ais.push(Aicontr::new(i))
+    }
     app.drones.push(Drone::new());
 
     let mut events = Events::new(EventSettings::new());
@@ -151,6 +157,7 @@ pub struct App {
     gui: Gui,
     map: Map,
     gsd: GameStateData,
+    ais: Vec<Aicontr>,
 }
 
 impl App {
@@ -202,11 +209,17 @@ impl App {
         }
         drop(_g);
 
+        let _g = hprof::enter("update ai");
+        for mut ai in &mut self.ais{
+        	ai.step(&mut self.gsd, &self.drones, &mut self.bases);
+        }
+        drop(_g);
+
         let _g = hprof::enter("update base");
         for mut b in &mut self.bases {
             let new_drone = b.update(args.dt);
             if let Some(nd) = new_drone {
-                let d = Drone::from_pos_n_type(b.pos, nd);
+                let d = Drone::from_pos_n_type(b.pos, nd, b.team as u8);
                 self.drones.push(d);
             }
         }

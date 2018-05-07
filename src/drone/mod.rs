@@ -39,7 +39,7 @@ impl Drone {
             behaviour: Behaviour::Move(Pos { x: 100.0, y: 000.0 }),
         }
     }
-    pub fn from_pos_n_type(pos: Pos, typ: unit_type) -> Drone {
+    pub fn from_pos_n_type(pos: Pos, typ: unit_type, team: u8) -> Drone {
         match typ {
             unit_type::Worker { cargo: _ } => Drone {
                 id: OBJECT_COUNTER.fetch_add(1, atomic::Ordering::SeqCst),
@@ -48,7 +48,7 @@ impl Drone {
                 max_speed: 15.0,
                 max_force: 10.0,
                 is_selected: false,
-                team: 0,
+                team,
                 u_type: unit_type::Worker { cargo: 0.0 },
                 behaviour: Behaviour::Move(pos),
             },
@@ -59,7 +59,7 @@ impl Drone {
                 max_speed: 25.0,
                 max_force: 10.0,
                 is_selected: false,
-                team: 0,
+                team,
                 u_type: unit_type::Soldier,
                 behaviour: Behaviour::Move(pos),
             },
@@ -241,7 +241,12 @@ impl Drone {
             .s_cor(c, s_width, s_height, x_center, y_center, scale);
         if self.is_selected {
             let big_square = rectangle::square(-1.0, -1.0, 5.5);
-            rectangle(::color::soft(::color::accent(self.team)), big_square, transform, gl);
+            rectangle(
+                ::color::soft(::color::accent(self.team)),
+                big_square,
+                transform,
+                gl,
+            );
         }
         rectangle(::color::team(self.team), square, transform, gl);
     }

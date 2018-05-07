@@ -56,7 +56,12 @@ impl Base {
         let square = rectangle::square(0.0, 0.0, 10.0);
         let transform = self.pos
             .s_cor(c, s_width, s_height, x_center, y_center, scale);
-        rectangle(::color::soft(::color::team(self.team)), square, transform, gl);
+        rectangle(
+            ::color::soft(::color::team(self.team)),
+            square,
+            transform,
+            gl,
+        );
     }
 
     pub fn queue_worker(&mut self, gsd: &mut GameStateData) {
